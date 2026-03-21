@@ -1,0 +1,25 @@
+# =============================================================================
+# Example tfvars — Copy to terraform.tfvars and fill in your values
+# DO NOT commit terraform.tfvars to git (it contains secrets)
+# =============================================================================
+#
+# SETUP INSTRUCTIONS:
+# 1. Copy this file: cp terraform.tfvars.example terraform.tfvars
+# 2. Fill in your actual credentials below
+# 3. NEVER commit terraform.tfvars to git (already in .gitignore)
+#
+# =============================================================================
+
+# GCP Configuration
+gcp_project_id  = "your-gcp-project-id"        # Your GCP project ID
+gcp_region      = "europe-west1"                # GCP region for resources
+gcs_bucket_name = "ml-energy-consumption"       # Base name for GCS buckets
+
+# Snowflake Configuration
+snowflake_organization_name = "YOUR_ORG_NAME"   # From Snowflake account URL (part before -)
+snowflake_account_name      = "YOUR_ACCOUNT"    # From Snowflake account URL (part after -)
+snowflake_user              = "your_username"   # Snowflake username
+snowflake_password          = "your_password"   # Snowflake password (KEEP SECRET!)
+snowflake_role              = "ACCOUNTADMIN"    # Snowflake role (use least privilege in production)
+snowflake_warehouse         = "ML_ENERGY_WH"    # Warehouse name to create
+snowflake_database          = "ML_ENERGY_DB"    # Database name to create

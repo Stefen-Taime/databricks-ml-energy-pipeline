@@ -1,0 +1,76 @@
+# =============================================================================
+# .gitignore — ML Energy Consumption Project
+# =============================================================================
+
+# Terraform
+terraform/.terraform/
+terraform/*.tfstate
+terraform/*.tfstate.backup
+terraform/*.tfvars
+terraform/.terraform.lock.hcl
+
+# Environment Variables & Secrets
+.env
+.env.*
+!.env.example
+eia_api_key.txt
+*_credentials.json
+*_service_account*.json
+*.key
+*.pem
+secrets/
+credentials/
+
+# JSON files (be selective to avoid accidentally committing credentials)
+*.json
+!terraform/*.tf.json
+!package.json
+!package-lock.json
+!tsconfig.json
+
+# Data (Kaggle dataset ~10GB)
+data/
+archive.zip
+*.csv
+*.parquet
+!**/example*.csv
+
+# Python
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+.venv/
+venv/
+env/
+ENV/
+*.egg-info/
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+
+# Jupyter / IPython
+.ipynb_checkpoints/
+*.ipynb
+!docs/*.ipynb
+
+# IDE & Editors
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Logs
+*.log
+logs/
+*.out
+
+# Databricks
+.databricks/
+
+# Streamlit
+.streamlit/secrets.toml

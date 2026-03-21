@@ -1,0 +1,11 @@
+command:
+  - "bash"
+  - "start.sh"
+
+env:
+  - name: SNOWFLAKE_ACCOUNT
+    description: "Snowflake account identifier (org-account)"
+  - name: SNOWFLAKE_USER
+    description: "Snowflake username"
+  - name: SNOWFLAKE_PASSWORD
+    description: "Snowflake password"
