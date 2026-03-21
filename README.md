@@ -1,36 +1,36 @@
 # ML Predict User Consumption
 
-Prediction de la consommation electrique individuelle (kWh) par demi-heure, basee sur le dataset "Smart Meters in London" (Kaggle).
+Prediction of individual electricity consumption (kWh) per half-hour, based on the "Smart Meters in London" dataset (Kaggle).
 
-Pipeline MLOps complet : Terraform (IaC) -> GCS (Medallion) -> Databricks (Spark + XGBoost + MLflow) -> Snowpipe -> Snowflake.
-
----
-
-## Contexte du Projet
-
-Ce projet est le "cerveau" algorithmique d'une application B2C dediee a la maitrise de l'energie (type *Smart Home* / *Opower*).
-L'objectif est d'offrir a chaque utilisateur individuel (identifie par `LCLid`) un tableau de bord predictif de sa propre consommation electrique.
-
-Le produit final est capable de :
-1. Predire la consommation d'energie (en kWh) d'un utilisateur demi-heure par demi-heure pour le lendemain.
-2. Estimer son budget d'energie pour la fin du mois.
-3. Emettre des recommandations hyper-personnalisees (ex: *"Alerte pointe tarifaire : decalez vos appareils electromenagers demain a 14h pour economiser"*).
+Complete MLOps pipeline: Terraform (IaC) -> GCS (Medallion) -> Databricks (Spark + XGBoost + MLflow) -> Snowpipe -> Snowflake.
 
 ---
 
-## Structure du Projet
+## Project Context
+
+This project is the algorithmic "brain" of a B2C application dedicated to energy management (similar to *Smart Home* / *Opower*).
+The goal is to provide each individual user (identified by `LCLid`) with a predictive dashboard of their own electricity consumption.
+
+The final product is capable of:
+1. Predicting the energy consumption (in kWh) of a user half-hour by half-hour for the next day.
+2. Estimating their energy budget for the end of the month.
+3. Issuing hyper-personalized recommendations (e.g., *"Peak tariff alert: shift your appliances tomorrow at 2 PM to save money"*).
+
+---
+
+## Project Structure
 
 ```
 Ml-predict-user-consomation/
 |
 |-- terraform/                     # Infrastructure as Code
-|   |-- main.tf                    # Orchestration des modules
+|   |-- main.tf                    # Module orchestration
 |   |-- providers.tf               # GCP + Snowflake providers
-|   |-- variables.tf               # Variables d'entree
-|   |-- outputs.tf                 # Outputs post-apply
-|   |-- terraform.tfvars.example   # Template de configuration
+|   |-- variables.tf               # Input variables
+|   |-- outputs.tf                 # Post-apply outputs
+|   |-- terraform.tfvars.example   # Configuration template
 |   |-- modules/
-|       |-- gcs/                   # Buckets GCS + upload Kaggle data
+|       |-- gcs/                   # GCS Buckets + upload Kaggle data
 |       |   |-- main.tf
 |       |   |-- variables.tf
 |       |   |-- outputs.tf
@@ -46,124 +46,124 @@ Ml-predict-user-consomation/
 |           |-- outputs.tf
 |           |-- versions.tf
 |
-|-- notebooks/                     # Databricks notebooks (pipeline ML)
+|-- notebooks/                     # Databricks notebooks (ML pipeline)
 |   |-- 01_ingestion_bronze.py     # APIs -> GCS Bronze
 |   |-- 02_nettoyage_silver.py     # Bronze -> Silver (Delta Lake)
 |   |-- 03_training.py             # Feature Eng + XGBoost + Walk-Forward + MLflow
 |   |-- 04_inference_gold.py       # Predictions -> GCS Gold -> Snowpipe
 |
 |-- dashboard/                     # Streamlit dashboard (Databricks Apps)
-|   |-- app.py                     # Dashboard principal (5 pages, Plotly)
-|   |-- app.yaml                   # Configuration Databricks Apps
-|   |-- requirements.txt           # Dependances Python
-|   |-- start.sh                   # Lanceur avec port dynamique
-|   |-- app_debug.py               # Page de diagnostic
+|   |-- app.py                     # Main dashboard (5 pages, Plotly)
+|   |-- app.yaml                   # Databricks Apps configuration
+|   |-- requirements.txt           # Python dependencies
+|   |-- start.sh                   # Launcher with dynamic port
+|   |-- app_debug.py               # Diagnostic page
 |
-|-- img/                            # Captures d'ecran du dashboard
+|-- img/                            # Dashboard screenshots
 |
-|-- data/                          # Dataset Kaggle (gitignore, ~10 GB)
+|-- data/                          # Kaggle dataset (gitignored, ~10 GB)
 |-- .gitignore
 |-- README.md
 ```
 
 ---
 
-## Pre-requis
+## Prerequisites
 
-| Outil | Version | Usage |
+| Tool | Version | Usage |
 |---|---|---|
-| **Terraform** | >= 1.5 | Provisionnement infrastructure |
-| **gcloud CLI** | latest | Authentification GCP + gsutil |
+| **Terraform** | >= 1.5 | Infrastructure provisioning |
+| **gcloud CLI** | latest | GCP authentication + gsutil |
 | **Databricks CLI** | latest | Secrets + import notebooks |
-| **Compte GCP** | -- | Projet avec APIs Storage & Pub/Sub activees |
-| **Compte Snowflake** | -- | Trial ou payant, role ACCOUNTADMIN |
-| **Compte Databricks** | Free Edition | Workspace avec compute serverless |
+| **GCP Account** | -- | Project with Storage & Pub/Sub APIs enabled |
+| **Snowflake Account** | -- | Trial or paid, ACCOUNTADMIN role |
+| **Databricks Account** | Free Edition | Workspace with serverless compute |
 
 ---
 
-## Installation et Deploiement
+## Installation and Deployment
 
-### 1. Cloner le repo et telecharger le dataset
+### 1. Clone the repo and download the dataset
 
 ```bash
 git clone <repo-url>
 cd Ml-predict-user-consomation
 
-# Telecharger le dataset Kaggle "Smart Meters in London"
+# Download the Kaggle dataset "Smart Meters in London"
 # https://www.kaggle.com/datasets/jeanmidev/smart-meters-in-london
-# Dezipper dans data/
+# Unzip into data/
 unzip archive.zip -d data/
 ```
 
-Le dossier `data/` doit contenir :
-- `halfhourly_dataset/halfhourly_dataset/block_*.csv` (112 fichiers)
+The `data/` folder should contain:
+- `halfhourly_dataset/halfhourly_dataset/block_*.csv` (112 files)
 - `informations_households.csv`
 - `weather_hourly_darksky.csv`
 - `uk_bank_holidays.csv`
 - `acorn_details.csv`
 
-### 2. Configurer Terraform
+### 2. Configure Terraform
 
 ```bash
 cd terraform
 
-# Copier le template et remplir avec vos valeurs
+# Copy the template and fill in your values
 cp terraform.tfvars.example terraform.tfvars
-# Editer terraform.tfvars avec : GCP project ID, Snowflake credentials, etc.
+# Edit terraform.tfvars with: GCP project ID, Snowflake credentials, etc.
 
-# Authentification GCP
+# GCP authentication
 gcloud auth application-default login
 
-# Deployer toute l'infrastructure
+# Deploy the entire infrastructure
 terraform init
 terraform plan
 terraform apply
 ```
 
-Terraform provisionne en une commande :
-- 3 buckets GCS (bronze, silver, gold) avec versioning
-- Upload des fichiers Kaggle vers GCS Bronze via `gsutil`
-- Database Snowflake (`ML_ENERGY_DB`), 3 schemas, 4 tables, warehouse XSMALL
-- Pub/Sub topic + subscription pour Snowpipe
-- Storage integration + Notification integration + Stage + Pipe auto-ingest
+Terraform provisions in one command:
+- 3 GCS buckets (bronze, silver, gold) with versioning
+- Upload Kaggle files to GCS Bronze via `gsutil`
+- Snowflake database (`ML_ENERGY_DB`), 3 schemas, 4 tables, XSMALL warehouse
+- Pub/Sub topic + subscription for Snowpipe
+- Storage integration + Notification integration + Stage + auto-ingest Pipe
 
-### 3. Post-apply : IAM Snowpipe
+### 3. Post-apply: Snowpipe IAM
 
-Apres `terraform apply`, accorder les permissions aux Service Accounts Snowflake (affiches dans les outputs) :
+After `terraform apply`, grant permissions to the Snowflake Service Accounts (displayed in outputs):
 
 ```bash
-# 1. Pub/Sub Subscriber pour le SA de notification
+# 1. Pub/Sub Subscriber for notification SA
 gcloud pubsub subscriptions add-iam-policy-binding snowpipe-gold-sub \
   --member="serviceAccount:<NOTIFICATION_SA>" \
   --role="roles/pubsub.subscriber" \
   --project="<GCP_PROJECT_ID>"
 
-# 2. Monitoring Viewer au niveau projet
+# 2. Monitoring Viewer at project level
 gcloud projects add-iam-policy-binding <GCP_PROJECT_ID> \
   --member="serviceAccount:<NOTIFICATION_SA>" \
   --role="roles/monitoring.viewer"
 
-# 3. GCS Object Viewer pour le SA de storage
+# 3. GCS Object Viewer for storage SA
 gsutil iam ch serviceAccount:<STORAGE_SA>:objectViewer \
   gs://ml-energy-consumption-gold
 ```
 
-Les valeurs des SA sont visibles via :
+The SA values are visible via:
 ```bash
 terraform output snowflake_notification_sa
 terraform output snowflake_storage_integration_details
 ```
 
-### 4. Configurer Databricks
+### 4. Configure Databricks
 
 ```bash
-# Installer le CLI
+# Install the CLI
 brew tap databricks/tap && brew install databricks/tap/databricks
 
-# Configurer l'authentification (Personal Access Token)
+# Configure authentication (Personal Access Token)
 databricks configure --host https://<workspace>.cloud.databricks.com
 
-# Creer un Service Account GCP et sa cle JSON
+# Create a GCP Service Account and its JSON key
 gcloud iam service-accounts create ml-energy-sa \
   --display-name="ML Energy Databricks SA" \
   --project=<GCP_PROJECT_ID>
@@ -175,15 +175,15 @@ gcloud projects add-iam-policy-binding <GCP_PROJECT_ID> \
 gcloud iam service-accounts keys create /tmp/sa-key.json \
   --iam-account=ml-energy-sa@<GCP_PROJECT_ID>.iam.gserviceaccount.com
 
-# Stocker les secrets dans Databricks
+# Store secrets in Databricks
 databricks secrets create-scope ml-energy
 databricks secrets put-secret ml-energy gcp-sa-key --string-value "$(cat /tmp/sa-key.json)"
-databricks secrets put-secret ml-energy elexon-api-key --string-value "<VOTRE_CLE_ELEXON>"
+databricks secrets put-secret ml-energy elexon-api-key --string-value "<YOUR_ELEXON_KEY>"
 
-# Supprimer la cle locale
+# Delete local key
 rm /tmp/sa-key.json
 
-# Importer les notebooks
+# Import notebooks
 databricks workspace mkdirs /Users/<email>/ml-energy
 databricks workspace import /Users/<email>/ml-energy/01_ingestion_bronze \
   --file notebooks/01_ingestion_bronze.py --language PYTHON --format SOURCE
@@ -195,12 +195,12 @@ databricks workspace import /Users/<email>/ml-energy/04_inference_gold \
   --file notebooks/04_inference_gold.py --language PYTHON --format SOURCE
 ```
 
-### 5. Executer le pipeline
+### 5. Execute the pipeline
 
-Un **Databricks Workflow** (Job) orchestre les 4 notebooks sequentiellement sur du compute serverless.
-Le Job est pre-configure avec un environnement contenant les dependances necessaires (`google-cloud-storage`, `requests`, `xgboost`, `pandas`, `numpy`, `scikit-learn`).
+A **Databricks Workflow** (Job) orchestrates the 4 notebooks sequentially on serverless compute.
+The Job is pre-configured with an environment containing the necessary dependencies (`google-cloud-storage`, `requests`, `xgboost`, `pandas`, `numpy`, `scikit-learn`).
 
-**Creer le Workflow via le CLI :**
+**Create the Workflow via CLI:**
 
 ```bash
 databricks jobs create --json @- <<'EOF'
@@ -265,104 +265,104 @@ databricks jobs create --json @- <<'EOF'
 EOF
 ```
 
-**Lancer le pipeline :**
+**Run the pipeline:**
 
 ```bash
-# Via CLI (remplacer <JOB_ID> par l'ID retourne ci-dessus)
+# Via CLI (replace <JOB_ID> with the ID returned above)
 databricks jobs run-now <JOB_ID>
 ```
 
-Ou via l'UI Databricks : **Workflows** > **ML Energy Pipeline** > **Run now**.
+Or via Databricks UI: **Workflows** > **ML Energy Pipeline** > **Run now**.
 
-Le pipeline execute :
+The pipeline executes:
 
-1. **01_ingestion_bronze** -- Ingere les donnees API (NESO, Elexon, Carbon Intensity) dans GCS Bronze
-2. **02_nettoyage_silver** -- Nettoie et transforme Bronze -> Silver (Delta Lake)
+1. **01_ingestion_bronze** -- Ingest API data (NESO, Elexon, Carbon Intensity) into GCS Bronze
+2. **02_nettoyage_silver** -- Clean and transform Bronze -> Silver (Delta Lake)
 3. **03_training** -- Feature engineering + XGBoost + Walk-Forward + MLflow
 4. **04_inference_gold** -- Predictions -> GCS Gold (Parquet) -> Snowpipe -> Snowflake
 
-Si une task echoue, les suivantes sont automatiquement sautees.
+If a task fails, subsequent tasks are automatically skipped.
 
-### 6. Resultats d'Execution du Pipeline
+### 6. Pipeline Execution Results
 
-Le pipeline complet a ete execute avec succes le **20 mars 2026** sur Databricks Free Edition.
+The complete pipeline was successfully executed on **March 20, 2026** on Databricks Free Edition.
 
-**Run ID** : `584630894868956` | **Job ID** : `342544352422540` | **Statut** : SUCCESS
+**Run ID**: `584630894868956` | **Job ID**: `342544352422540` | **Status**: SUCCESS
 
-#### Temps d'execution par etape
+#### Execution time per step
 
-| Etape | Debut | Fin | Duree | Description |
+| Step | Start | End | Duration | Description |
 |---|---|---|---|---|
-| `01_ingestion_bronze` | 10:02 | 10:09 | **6 min 32s** | Appels API NESO, Elexon, Carbon Intensity + upload GCS Bronze |
-| `02_nettoyage_silver` | 10:09 | 10:26 | **17 min 23s** | Nettoyage, jointures, feature engineering -> GCS Silver (Delta) |
+| `01_ingestion_bronze` | 10:02 | 10:09 | **6 min 32s** | NESO, Elexon, Carbon Intensity API calls + GCS Bronze upload |
+| `02_nettoyage_silver` | 10:09 | 10:26 | **17 min 23s** | Cleaning, joins, feature engineering -> GCS Silver (Delta) |
 | `03_training` | 10:26 | 10:43 | **17 min 22s** | XGBoost Walk-Forward 4 rounds + MLflow tracking |
-| `04_inference_gold` | 10:43 | 11:18 | **34 min 41s** | Predictions ~30M lignes -> GCS Gold (Parquet) -> Snowpipe |
-| **Total** | **10:02** | **11:18** | **1h 16min 08s** | Pipeline end-to-end |
+| `04_inference_gold` | 10:43 | 11:18 | **34 min 41s** | Predictions ~30M rows -> GCS Gold (Parquet) -> Snowpipe |
+| **Total** | **10:02** | **11:18** | **1h 16min 08s** | End-to-end pipeline |
 
-#### Pourquoi le pipeline prend ~1h16 ?
+#### Why does the pipeline take ~1h16?
 
-La duree totale s'explique principalement par les **contraintes de la Databricks Community / Free Edition** :
+The total duration is mainly explained by **Databricks Community / Free Edition constraints**:
 
-1. **Compute serverless restreint** : La Free Edition de Databricks fournit un compute serverless partage avec des ressources limitees (CPU, memoire). Contrairement aux clusters dedies d'une edition payante (Standard/Premium), le compute est bride en termes de parallelisme et de puissance de calcul. Il n'y a aucun controle sur la taille du cluster (nombre de workers, type d'instance).
+1. **Restricted serverless compute**: The Free Edition of Databricks provides shared serverless compute with limited resources (CPU, memory). Unlike dedicated clusters in a paid edition (Standard/Premium), the compute is throttled in terms of parallelism and computing power. There is no control over cluster size (number of workers, instance type).
 
-2. **Pas de cluster dedie** : En Free Edition, on ne peut pas provisionner de cluster Spark personnalise (ex: `i3.xlarge` avec 4 workers). Tout s'execute sur l'environnement serverless partage, ce qui signifie que les ressources sont mutualisees avec d'autres utilisateurs de la plateforme.
+2. **No dedicated cluster**: In Free Edition, you cannot provision a custom Spark cluster (e.g., `i3.xlarge` with 4 workers). Everything runs on the shared serverless environment, which means resources are pooled with other platform users.
 
-3. **Execution sequentielle obligatoire** : Les 4 notebooks s'executent l'un apres l'autre (chaque etape depend de la precedente). Il n'y a pas de parallelisation possible entre les etapes du pipeline.
+3. **Mandatory sequential execution**: The 4 notebooks run one after another (each step depends on the previous one). There is no possible parallelization between pipeline steps.
 
-4. **Volume de donnees important** : Le step d'inference (`04_inference_gold`) est le plus long (~35 min) car il genere des predictions pour l'ensemble des ~5,500 foyers x ~16,000 demi-heures, soit pres de **30 millions de lignes** de predictions, puis les exporte en Parquet vers GCS Gold pour ingestion Snowpipe.
+4. **Large data volume**: The inference step (`04_inference_gold`) is the longest (~35 min) because it generates predictions for all ~5,500 households x ~16,000 half-hours, i.e., nearly **30 million rows** of predictions, then exports them to Parquet to GCS Gold for Snowpipe ingestion.
 
-5. **Cold start a chaque task** : Chaque notebook demarre un nouvel environnement serverless, ce qui implique un temps de demarrage (installation des dependances `xgboost`, `google-cloud-storage`, etc.) a chaque etape.
+5. **Cold start at each task**: Each notebook starts a new serverless environment, which implies startup time (installation of dependencies `xgboost`, `google-cloud-storage`, etc.) at each step.
 
-> **Note** : Avec un cluster Databricks dedie (edition Standard/Premium), le meme pipeline s'executerait en **15-25 minutes** grace au parallelisme Spark, a des instances plus puissantes, et a l'absence de cold start entre les tasks. La Free Edition est suffisante pour le prototypage et la validation du pipeline, mais un environnement de production necessite un upgrade.
+> **Note**: With a dedicated Databricks cluster (Standard/Premium edition), the same pipeline would run in **15-25 minutes** thanks to Spark parallelism, more powerful instances, and no cold start between tasks. The Free Edition is sufficient for prototyping and pipeline validation, but a production environment requires an upgrade.
 
-#### Metriques du modele (MLflow)
+#### Model metrics (MLflow)
 
-Le modele `best_model_v1.0_20260320_1426` a passe le **Quality Gate** avec succes :
+The model `best_model_v1.0_20260320_1426` passed the **Quality Gate** successfully:
 
-| Metrique | Valeur | Seuil |
+| Metric | Value | Threshold |
 |---|---|---|
 | **WMAPE** | 31.82% | < 35% |
 | **R2** | 0.7426 | > 0.70 |
-| **RMSE** | 0.1557 | minimise |
-| **MAE** | 0.0786 | minimise |
+| **RMSE** | 0.1557 | minimized |
+| **MAE** | 0.0786 | minimized |
 
-- **Nombre de features retenues** : 34 (apres selection automatique en 2 passes)
-- **Meilleur round Walk-Forward** : Round 3 (janvier 2014)
-- **MLflow Run ID** : `dcc503f0d82c4344a66dfbb8889055a6`
+- **Number of features retained**: 34 (after automatic selection in 2 passes)
+- **Best Walk-Forward round**: Round 3 (January 2014)
+- **MLflow Run ID**: `dcc503f0d82c4344a66dfbb8889055a6`
 
 ---
 
-## Architecture des Donnees
+## Data Architecture
 
-### Sources de donnees (5 flux)
+### Data sources (5 streams)
 
-| # | Source | Contenu | Format |
+| # | Source | Content | Format |
 |---|---|---|---|
-| 1 | Smart Meters (Kaggle) | Consommation kWh/30min par foyer | 112 CSV (~10 GB) |
-| 2 | Households (Kaggle) | Profil ACORN (socio-demo) | CSV |
-| 3 | Weather (Kaggle) | Meteo horaire DarkSky | CSV |
-| 4 | UK Bank Holidays (Kaggle) | Jours feries UK | CSV |
-| 5 | APIs (NESO, Elexon, Carbon) | Demande nationale, prix marche, intensite carbone | JSON |
+| 1 | Smart Meters (Kaggle) | kWh/30min consumption per household | 112 CSV (~10 GB) |
+| 2 | Households (Kaggle) | ACORN profile (socio-demographic) | CSV |
+| 3 | Weather (Kaggle) | Hourly DarkSky weather | CSV |
+| 4 | UK Bank Holidays (Kaggle) | UK public holidays | CSV |
+| 5 | APIs (NESO, Elexon, Carbon) | National demand, market prices, carbon intensity | JSON |
 
-### Architecture Medallion (GCS)
+### Medallion Architecture (GCS)
 
 ```
-gs://ml-energy-consumption-bronze/    # Raw (CSV/JSON tel que recu)
-  smart_meters/block_*.csv            #   112 fichiers Kaggle
+gs://ml-energy-consumption-bronze/    # Raw (CSV/JSON as received)
+  smart_meters/block_*.csv            #   112 Kaggle files
   households/informations_households.csv
   weather/weather_hourly_darksky.csv
   holidays/uk_bank_holidays.csv
   neso/demand_national_raw.json       #   API
   elexon/system_prices_raw.json       #   API
-  carbon/carbon_intensity_raw.json    #   API (optionnel)
+  carbon/carbon_intensity_raw.json    #   API (optional)
 
-gs://ml-energy-consumption-silver/    # Clean (Delta Lake, aligne 30min)
-  smart_meters/                       #   Dedup, LOCF, filtre kWh > 0
-  weather/                            #   Interpolation horaire -> 30min
-  households/                         #   ACORN verifie
-  holidays/                           #   is_holiday binaire
-  neso/                               #   Aplati, timezone UK
-  elexon/                             #   Prix alignes 30min
+gs://ml-energy-consumption-silver/    # Clean (Delta Lake, aligned 30min)
+  smart_meters/                       #   Dedup, LOCF, filter kWh > 0
+  weather/                            #   Hourly interpolation -> 30min
+  households/                         #   ACORN verified
+  holidays/                           #   is_holiday binary
+  neso/                               #   Flattened, UK timezone
+  elexon/                             #   Prices aligned 30min
 
 gs://ml-energy-consumption-gold/      # Predictions (Parquet -> Snowpipe)
   predictions/                        #   user_id, timestamp, kwh_predicted
@@ -372,18 +372,18 @@ gs://ml-energy-consumption-gold/      # Predictions (Parquet -> Snowpipe)
 
 ```
 ML_ENERGY_DB
-  |-- RAW                             # Schema pour donnees brutes (reserve)
+  |-- RAW                             # Schema for raw data (reserved)
   |-- PREDICTIONS
-  |     |-- ENERGY_PREDICTIONS        # <- Snowpipe auto-ingest depuis Gold
-  |     |-- ENERGY_ACTUALS            # Consommation reelle pour comparaison
+  |     |-- ENERGY_PREDICTIONS        # <- Snowpipe auto-ingest from Gold
+  |     |-- ENERGY_ACTUALS            # Actual consumption for comparison
   |-- ANALYTICS
-        |-- HOUSEHOLDS                # Profils ACORN
-        |-- MODEL_METRICS             # MAPE, RMSE, MAE, R2 par round
+        |-- HOUSEHOLDS                # ACORN profiles
+        |-- MODEL_METRICS             # MAPE, RMSE, MAE, R2 per round
 ```
 
 ---
 
-## Architecture Globale
+## Global Architecture
 
 ```
   +------------ Databricks Free Edition ---------------+
@@ -396,16 +396,16 @@ ML_ENERGY_DB
   |  |  BRONZE (Raw) -> SILVER (Clean) -> GOLD    |     |
   |  +--------------------------------------------+     |
   |         |                                           |
-  |  Notebook 2 (Nettoyage)                             |
+  |  Notebook 2 (Cleaning)                              |
   |    Bronze -> Spark clean -> Silver (Delta Lake)     |
   |         |                                           |
   |  Notebook 3 (Training)                              |
   |    Silver -> Feature Eng -> XGBoost -> MLflow       |
-  |    Selection features (2 passes) + Walk-Forward     |
-  |    Quality Gate : WMAPE < 35%, R2 > 0.70             |
+  |    Feature selection (2 passes) + Walk-Forward      |
+  |    Quality Gate: WMAPE < 35%, R2 > 0.70             |
   |         |                                           |
   |  Notebook 4 (Inference)                             |
-  |    Modele MLflow -> Predictions -> Gold (Parquet)   |
+  |    MLflow model -> Predictions -> Gold (Parquet)    |
   |                                                     |
   +-----------------------------------------------------+
                         |
@@ -422,9 +422,9 @@ ML_ENERGY_DB
   |   (Serving)    |         |   Streamlit + Plotly             |
   |                |         |                                  |
   |  Predictions   |         |  Overview (KPIs, heatmap)        |
-  |  + Reel        |         |  My Consumption (profil 24h)     |
+  |  + Actual      |         |  My Consumption (24h profile)    |
   |                |         |  Predicted vs Actual (overlay)   |
-  |  Households    |         |  Budget (tarifs UK, savings)     |
+  |  Households    |         |  Budget (UK tariffs, savings)    |
   |  + Metrics     |         |  Model Performance (radar, WF)   |
   +----------------+         +----------------------------------+
 
@@ -437,207 +437,207 @@ ML_ENERGY_DB
 
 ---
 
-## Modelisation et Prediction
+## Modeling and Prediction
 
-### Ce qui est predit
+### What is predicted
 
-Pour un identifiant donne (`LCLid`) et un timestamp, le modele predit une valeur numerique continue (regression multivariee) :
-> **Combien de kWh seront consommes pour la prochaine demi-heure.**
+For a given identifier (`LCLid`) and timestamp, the model predicts a continuous numerical value (multivariate regression):
+> **How many kWh will be consumed for the next half-hour.**
 
-### Algorithme
+### Algorithm
 
-**XGBoost** (ou LightGBM) avec :
-- Features temporelles : heure, jour de semaine, mois, is_weekend, is_holiday
-- Features lag : consommation t-1, t-2, t-4, t-48, t-336
-- Features rolling : moyenne/ecart-type glissants 24h
-- Features meteo : temperature, humidite, pression, vent, etc.
-- Features socio-demo : groupe ACORN, type de tarif (stdorToU)
-- Features macro : demande nationale (NESO), prix marche (Elexon)
+**XGBoost** (or LightGBM) with:
+- Temporal features: hour, day of week, month, is_weekend, is_holiday
+- Lag features: consumption t-1, t-2, t-4, t-48, t-336
+- Rolling features: 24h rolling mean/std
+- Weather features: temperature, humidity, pressure, wind, etc.
+- Socio-demographic features: ACORN group, tariff type (stdorToU)
+- Macro features: national demand (NESO), market prices (Elexon)
 
-### Selection Automatique des Features (2 passes)
+### Automatic Feature Selection (2 passes)
 
-1. **Passe 1 (Exploration)** : Entrainement XGBoost sur toutes les features. Classement d'importance.
-2. **Quality Gate** : Features avec importance < 1% du max sont eliminees.
-3. **Passe 2 (Production)** : Re-entrainement sur le sous-ensemble retenu. Validation des metriques.
+1. **Pass 1 (Exploration)**: XGBoost training on all features. Importance ranking.
+2. **Quality Gate**: Features with importance < 1% of max are eliminated.
+3. **Pass 2 (Production)**: Re-training on the retained subset. Metrics validation.
 
-### Validation : Walk-Forward (4 rounds)
+### Validation: Walk-Forward (4 rounds)
 
 ```
-Round 1 : Train [mi-2012 --- oct 2013] -> Predit nov 2013 -> Compare au reel
-Round 2 : Train [mi-2012 ---- nov 2013] -> Predit dec 2013 -> Compare au reel
-Round 3 : Train [mi-2012 ----- dec 2013] -> Predit jan 2014 -> Compare au reel
-Round 4 : Train [mi-2012 ------ jan 2014] -> Predit fev 2014 -> Compare au reel
+Round 1: Train [mid-2012 --- Oct 2013] -> Predict Nov 2013 -> Compare to actual
+Round 2: Train [mid-2012 ---- Nov 2013] -> Predict Dec 2013 -> Compare to actual
+Round 3: Train [mid-2012 ----- Dec 2013] -> Predict Jan 2014 -> Compare to actual
+Round 4: Train [mid-2012 ------ Jan 2014] -> Predict Feb 2014 -> Compare to actual
 ```
 
-Le MAPE moyen sur tous les rounds constitue la metrique finale.
+The average MAPE across all rounds constitutes the final metric.
 
-### Metriques cibles
+### Target metrics
 
-| Metrique | Seuil (Quality Gate) |
+| Metric | Threshold (Quality Gate) |
 |---|---|
 | WMAPE | < 35% |
 | R2 | > 0.70 |
-| RMSE | minimise |
-| MAE | minimise |
+| RMSE | minimized |
+| MAE | minimized |
 
 ---
 
 ## Technologies
 
-| Composant | Technologie |
+| Component | Technology |
 |---|---|
-| Infrastructure as Code | Terraform (modules GCS, Snowflake, Snowpipe) |
-| Stockage | Google Cloud Storage (Medallion : Bronze/Silver/Gold) |
-| Format donnees | Delta Lake (Silver), Parquet (Gold) |
+| Infrastructure as Code | Terraform (GCS, Snowflake, Snowpipe modules) |
+| Storage | Google Cloud Storage (Medallion: Bronze/Silver/Gold) |
+| Data format | Delta Lake (Silver), Parquet (Gold) |
 | Compute / ML | Databricks Free Edition (Spark + XGBoost) |
-| Tracking ML | MLflow (integre Databricks) |
+| ML Tracking | MLflow (Databricks integrated) |
 | Data Warehouse | Snowflake |
-| Ingestion auto | Snowpipe + GCS Pub/Sub notifications |
-| Dashboard | Streamlit + Plotly (deploye sur Databricks Apps) |
-| Hebergement dashboard | Databricks Apps (HTTPS, OAuth integre) |
-| Gouvernance donnees | Unity Catalog (lineage, discovery, ACL) |
+| Auto ingestion | Snowpipe + GCS Pub/Sub notifications |
+| Dashboard | Streamlit + Plotly (deployed on Databricks Apps) |
+| Dashboard hosting | Databricks Apps (HTTPS, integrated OAuth) |
+| Data governance | Unity Catalog (lineage, discovery, ACL) |
 
 ---
 
-## Performance & Optimisations
+## Performance & Optimizations
 
-### Temps d'Execution Pipeline Complet
+### Complete Pipeline Execution Time
 
-| Task | Description | Duree Moyenne | Optimisations |
-|------|-------------|---------------|---------------|
-| **01_ingestion_bronze** | Ingestion APIs → GCS Bronze | ~8 min | Download concurrent, caching |
-| **02_nettoyage_silver** | Nettoyage Bronze → Silver | ~15 min | Spark direct read (optimise de 1h+ à 15min) |
-| **03_training** | Training XGBoost + MLflow | ~16 min | Walk-forward validation, feature selection |
-| **04_inference_gold** | Predictions → GCS Gold | ~10-15 min | Limite à 20 blocs (demo), float32, GC agressif |
-| **TOTAL** | Pipeline end-to-end | **~50 min** | Optimisations memoire et reseau |
+| Task | Description | Average Duration | Optimizations |
+|------|-------------|------------------|---------------|
+| **01_ingestion_bronze** | API ingestion → GCS Bronze | ~8 min | Concurrent download, caching |
+| **02_nettoyage_silver** | Bronze → Silver cleaning | ~15 min | Spark direct read (optimized from 1h+ to 15min) |
+| **03_training** | XGBoost training + MLflow | ~16 min | Walk-forward validation, feature selection |
+| **04_inference_gold** | Predictions → GCS Gold | ~10-15 min | Limited to 20 blocks (demo), float32, aggressive GC |
+| **TOTAL** | End-to-end pipeline | **~50 min** | Memory and network optimizations |
 
-### Optimisations Appliquees
+### Applied Optimizations
 
-#### Notebook 02 (Nettoyage Silver)
-- ✅ **Lecture Spark directe** depuis GCS au lieu de bloc-par-bloc
-- ✅ **Ecriture Unity Catalog** en une seule operation `overwrite` au lieu de 112 `append`
-- ✅ **Performance gain** : 4-6x plus rapide (1h+ → 15 min)
+#### Notebook 02 (Silver Cleaning)
+- ✅ **Direct Spark read** from GCS instead of block-by-block
+- ✅ **Unity Catalog write** in a single `overwrite` operation instead of 112 `append`
+- ✅ **Performance gain**: 4-6x faster (1h+ → 15 min)
 
-#### Notebook 04 (Inference Gold)
-- ✅ **Limitation blocs** : 20/112 blocs traités (~18% dataset) pour demo
-- ✅ **Optimisation memoire** : Features en float32 au lieu de float64 (50% RAM economisee)
-- ✅ **GC agressif** : Garbage collection tous les 10 blocs au lieu de 20
-- ✅ **Timeout GCS** : Augmente à 300s avec retry automatique (3 tentatives)
-- ✅ **Tri par taille** : Traiter les petits fichiers d'abord
+#### Notebook 04 (Gold Inference)
+- ✅ **Block limitation**: 20/112 blocks processed (~18% dataset) for demo
+- ✅ **Memory optimization**: Features in float32 instead of float64 (50% RAM saved)
+- ✅ **Aggressive GC**: Garbage collection every 10 blocks instead of 20
+- ✅ **GCS timeout**: Increased to 300s with automatic retry (3 attempts)
+- ✅ **Sort by size**: Process small files first
 
-### Configuration Production
+### Production Configuration
 
-Pour traiter le dataset complet (112 blocs, ~5.5M lignes), modifier dans `notebooks/04_inference_gold.py` ligne 224 :
+To process the complete dataset (112 blocks, ~5.5M rows), modify in `notebooks/04_inference_gold.py` line 224:
 
 ```python
-MAX_BLOCKS_FOR_INFERENCE = 112  # Au lieu de 20
+MAX_BLOCKS_FOR_INFERENCE = 112  # Instead of 20
 ```
 
-**Impact :**
-- Temps d'inference : ~50-60 min (au lieu de 10-15 min)
-- Predictions : 5.5M lignes (au lieu de 1M)
-- Couverture : 100% des foyers (au lieu de 18%)
+**Impact:**
+- Inference time: ~50-60 min (instead of 10-15 min)
+- Predictions: 5.5M rows (instead of 1M)
+- Coverage: 100% of households (instead of 18%)
 
-### Compute Serverless Databricks
+### Databricks Serverless Compute
 
-Le pipeline utilise **Databricks Serverless Compute** (pas besoin de cluster persistent) :
-- Auto-scaling selon la charge
-- Pay-per-use (facturation à la seconde)
-- Cold start : ~2-3 min par task
-- Memoire : 8-16 GB par worker (auto-ajuste)
+The pipeline uses **Databricks Serverless Compute** (no need for persistent cluster):
+- Auto-scaling according to load
+- Pay-per-use (billing per second)
+- Cold start: ~2-3 min per task
+- Memory: 8-16 GB per worker (auto-adjusts)
 
 ---
 
-## Unity Catalog -- Gouvernance des Donnees
+## Unity Catalog -- Data Governance
 
-Toutes les tables du pipeline sont enregistrees dans **Unity Catalog** pour beneficier du lineage automatique, de la data discovery et de la gouvernance.
+All pipeline tables are registered in **Unity Catalog** to benefit from automatic lineage, data discovery, and governance.
 
-### Organisation des tables UC
+### UC table organization
 
 ```
-ml_energy (Catalogue)
+ml_energy (Catalog)
 |
 |-- bronze (Schema)
-|   |-- neso_demand_raw          # Donnees brutes NESO (JSON aplati)
-|   |-- elexon_prices_raw        # Prix marche bruts Elexon
-|   |-- smart_meters_metadata    # Metadata des 112 fichiers CSV (trop gros pour UC)
-|   |-- households_raw           # Profils ACORN bruts
-|   |-- weather_raw              # Meteo horaire DarkSky brute
-|   |-- holidays_raw             # Jours feries UK bruts
+|   |-- neso_demand_raw          # NESO raw data (flattened JSON)
+|   |-- elexon_prices_raw        # Elexon raw market prices
+|   |-- smart_meters_metadata    # Metadata of 112 CSV files (too large for UC)
+|   |-- households_raw           # Raw ACORN profiles
+|   |-- weather_raw              # Raw hourly DarkSky weather
+|   |-- holidays_raw             # Raw UK public holidays
 |
 |-- silver (Schema)
-|   |-- smart_meters             # ~30M lignes, dedup + LOCF + filtre kWh > 0
-|   |-- weather                  # Interpolation 30min, colonnes nettoyees
-|   |-- households               # ACORN verifie, labels uniformises
-|   |-- holidays                 # Serie complete avec is_holiday binaire
-|   |-- neso_demand              # Demande nationale, timezone UK
-|   |-- elexon_prices            # Prix alignes 30min
+|   |-- smart_meters             # ~30M rows, dedup + LOCF + filter kWh > 0
+|   |-- weather                  # 30min interpolation, cleaned columns
+|   |-- households               # ACORN verified, standardized labels
+|   |-- holidays                 # Complete series with is_holiday binary
+|   |-- neso_demand              # National demand, UK timezone
+|   |-- elexon_prices            # Prices aligned 30min
 |
 |-- gold (Schema)
-    |-- energy_predictions       # Predictions kWh par foyer/timestamp
-    |-- energy_actuals           # Consommation reelle pour comparaison
-    |-- walk_forward_metrics     # WMAPE, R2, RMSE, MAE par round
-    |-- feature_importance       # Classement des features XGBoost
-    |-- energy_consumption_xgboost  # Modele MLflow (UC Model Registry)
+    |-- energy_predictions       # kWh predictions per household/timestamp
+    |-- energy_actuals           # Actual consumption for comparison
+    |-- walk_forward_metrics     # WMAPE, R2, RMSE, MAE per round
+    |-- feature_importance       # XGBoost feature ranking
+    |-- energy_consumption_xgboost  # MLflow model (UC Model Registry)
 ```
 
-### Avantages apportes par Unity Catalog
+### Benefits provided by Unity Catalog
 
-| Fonctionnalite | Description |
+| Feature | Description |
 |---|---|
-| **Lineage automatique** | Visualisation du flux Bronze -> Silver -> Gold dans l'UI Databricks |
-| **Data Discovery** | Recherche et exploration des tables via le Catalog Explorer |
-| **Gouvernance (ACL)** | Controle d'acces granulaire par table/schema/catalogue |
-| **Model Registry UC** | Modele XGBoost enregistre au format 3-level namespace (`ml_energy.gold.energy_consumption_xgboost`) |
-| **Audit & Compliance** | Historique des acces et modifications |
+| **Automatic lineage** | Visualization of Bronze -> Silver -> Gold flow in Databricks UI |
+| **Data Discovery** | Search and explore tables via Catalog Explorer |
+| **Governance (ACL)** | Granular access control per table/schema/catalog |
+| **UC Model Registry** | XGBoost model registered in 3-level namespace format (`ml_energy.gold.energy_consumption_xgboost`) |
+| **Audit & Compliance** | History of accesses and modifications |
 
-### Coexistence avec GCS + Snowpipe
+### Coexistence with GCS + Snowpipe
 
-Unity Catalog **n'interfere pas** avec le flux existant :
+Unity Catalog **does not interfere** with the existing flow:
 
 ```
 Bronze (GCS) -----> Silver (GCS) -----> Gold (GCS) -----> Snowpipe -> Snowflake
      |                   |                   |
      v                   v                   v
    UC Bronze           UC Silver           UC Gold
-   (tables Delta)      (tables Delta)      (tables Delta + modele)
+   (Delta tables)      (Delta tables)      (Delta tables + model)
 ```
 
-Les ecritures GCS restent intactes (Snowpipe continue de fonctionner). Les tables UC sont des **copies Delta** enregistrees en parallele, servant de couche de gouvernance et de discovery.
+GCS writes remain intact (Snowpipe continues to work). UC tables are **Delta copies** registered in parallel, serving as a governance and discovery layer.
 
 ---
 
 ## Roadmap -- Delta Live Tables (DLT / Lakeflow Pipelines)
 
-### Pourquoi DLT ?
+### Why DLT?
 
-Delta Live Tables (renomme **Lakeflow Pipelines**) est l'evolution naturelle de ce projet. Il permet de transformer les 4 notebooks orchestres par un Job en un **pipeline declaratif unique** avec gestion automatique de la qualite des donnees.
+Delta Live Tables (renamed **Lakeflow Pipelines**) is the natural evolution of this project. It allows transforming the 4 notebooks orchestrated by a Job into a **single declarative pipeline** with automatic data quality management.
 
-### Architecture actuelle vs DLT
+### Current architecture vs DLT
 
-| | Architecture actuelle | Avec DLT |
+| | Current architecture | With DLT |
 |---|---|---|
-| **Orchestration** | Job multi-task (4 notebooks sequentiels) | Pipeline DLT declaratif unique |
-| **Quality Gates** | Code Python custom (`if wmape > seuil`) | `@dlt.expect("valid_kwh", "kwh >= 0")` |
-| **Gestion des erreurs** | Try/except manuels | Quarantine automatique des lignes invalides |
-| **Lineage** | Via Unity Catalog (ajoute manuellement) | Natif et automatique |
-| **Monitoring** | Logs + MLflow | Event log DLT + Databricks Observability |
+| **Orchestration** | Multi-task Job (4 sequential notebooks) | Single declarative DLT pipeline |
+| **Quality Gates** | Custom Python code (`if wmape > threshold`) | `@dlt.expect("valid_kwh", "kwh >= 0")` |
+| **Error handling** | Manual try/except | Automatic quarantine of invalid rows |
+| **Lineage** | Via Unity Catalog (manually added) | Native and automatic |
+| **Monitoring** | Logs + MLflow | DLT event log + Databricks Observability |
 
-### Exemple de refactoring DLT
+### DLT refactoring example
 
-Le pipeline actuel en 4 notebooks deviendrait :
+The current 4-notebook pipeline would become:
 
 ```python
 import dlt
 from pyspark.sql.functions import *
 
-# Bronze : ingestion brute
+# Bronze: raw ingestion
 @dlt.table(comment="Smart meters raw data from GCS Bronze")
 @dlt.expect_or_drop("valid_timestamp", "timestamp IS NOT NULL")
 def bronze_smart_meters():
     return spark.read.parquet("gs://ml-energy-consumption-bronze/smart_meters/")
 
-# Silver : nettoyage
+# Silver: cleaning
 @dlt.table(comment="Smart meters cleaned and deduplicated")
 @dlt.expect("positive_kwh", "kwh > 0")
 @dlt.expect_or_drop("valid_user", "user_id IS NOT NULL")
@@ -648,7 +648,7 @@ def silver_smart_meters():
         .filter(col("kwh") > 0)
     )
 
-# Gold : predictions
+# Gold: predictions
 @dlt.table(comment="Energy consumption predictions")
 @dlt.expect("valid_prediction", "kwh_predicted >= 0")
 def gold_energy_predictions():
@@ -657,70 +657,70 @@ def gold_energy_predictions():
     return predictions_df
 ```
 
-### Effort estime
+### Estimated effort
 
-| Etape | Effort | Description |
+| Step | Effort | Description |
 |---|---|---|
-| Reecriture des notebooks | 2-3 jours | Convertir les 4 notebooks en decorateurs `@dlt.table` |
-| Configuration du pipeline DLT | 1 jour | Remplacer le Job multi-task par un DLT Pipeline |
-| Tests et validation | 1-2 jours | Verifier que les expectations DLT capturent les memes cas |
-| **Total** | **4-6 jours** | Refactoring complet, sans changement fonctionnel |
+| Notebook rewriting | 2-3 days | Convert 4 notebooks to `@dlt.table` decorators |
+| DLT pipeline configuration | 1 day | Replace multi-task Job with DLT Pipeline |
+| Testing and validation | 1-2 days | Verify that DLT expectations capture the same cases |
+| **Total** | **4-6 days** | Complete refactoring, no functional change |
 
-### Priorite
+### Priority
 
-DLT est recommande comme **Phase 2** du projet, apres la mise en production de la version Unity Catalog. Les benefices principaux sont :
+DLT is recommended as **Phase 2** of the project, after putting the Unity Catalog version into production. The main benefits are:
 
-1. **Simplification de l'orchestration** (1 pipeline au lieu de 4 notebooks + Job)
-2. **Quality gates declaratives** (plus robuste que le code custom)
-3. **Auto-recovery** (reprise automatique en cas d'echec)
-4. **Monitoring natif** (event log, data quality dashboard)
+1. **Orchestration simplification** (1 pipeline instead of 4 notebooks + Job)
+2. **Declarative quality gates** (more robust than custom code)
+3. **Auto-recovery** (automatic resume on failure)
+4. **Native monitoring** (event log, data quality dashboard)
 
-> **Notebook de reference** : `notebooks/dlt_pipeline_reference.py` contient l'implementation complete DLT prete a deployer sur un workspace Premium.
+> **Reference notebook**: `notebooks/dlt_pipeline_reference.py` contains the complete DLT implementation ready to deploy on a Premium workspace.
 
 ---
 
-## Roadmap -- Model Serving (Inference Temps Reel)
+## Roadmap -- Model Serving (Real-Time Inference)
 
 ### Concept
 
-Au lieu de lancer un pipeline batch (~35 min) pour generer toutes les predictions d'un coup, **Model Serving** expose le modele XGBoost comme un **endpoint REST**. Les predictions se font a la demande, en temps reel.
+Instead of running a batch pipeline (~35 min) to generate all predictions at once, **Model Serving** exposes the XGBoost model as a **REST endpoint**. Predictions are made on demand, in real-time.
 
-### Architecture Batch (actuelle) vs Temps Reel
+### Batch (current) vs Real-Time Architecture
 
 ```
-BATCH (actuel) :
-  Toutes les 24h -> Job Databricks (35 min) -> Parquet -> Snowpipe -> Snowflake -> Dashboard
-  Latence : ~35 min pour toutes les predictions
+BATCH (current):
+  Every 24h -> Databricks Job (35 min) -> Parquet -> Snowpipe -> Snowflake -> Dashboard
+  Latency: ~35 min for all predictions
 
-TEMPS REEL (Model Serving) :
-  App/Dashboard -> POST /predict {"user_id":"MAC000012","hour":18} -> 100ms -> reponse JSON
-  Latence : < 200 ms par prediction
+REAL-TIME (Model Serving):
+  App/Dashboard -> POST /predict {"user_id":"MAC000012","hour":18} -> 100ms -> JSON response
+  Latency: < 200 ms per prediction
 ```
 
-### Comparaison
+### Comparison
 
-| Aspect | Batch actuel | Model Serving |
+| Aspect | Current batch | Model Serving |
 |---|---|---|
-| **Latence** | Predictions disponibles apres ~35 min | Reponse en < 200 ms |
-| **Fraicheur** | Predictions generees 1x/jour | Predictions a la demande |
-| **Cout** | Cluster execute 1x/jour (~0.50 USD) | Endpoint actif en permanence (~5-20 USD/jour) |
-| **Scaling** | Fixe | Auto-scale selon le trafic |
-| **Use cases** | Dashboard reporting, analyse historique | Alertes push, app mobile, widget temps reel |
+| **Latency** | Predictions available after ~35 min | Response in < 200 ms |
+| **Freshness** | Predictions generated 1x/day | On-demand predictions |
+| **Cost** | Cluster runs 1x/day (~0.50 USD) | Endpoint active 24/7 (~5-20 USD/day) |
+| **Scaling** | Fixed | Auto-scale according to traffic |
+| **Use cases** | Reporting dashboard, historical analysis | Push alerts, mobile app, real-time widget |
 
-### Cas d'usage concrets pour le projet
+### Concrete use cases for the project
 
-1. **Alertes push temps reel** : "Votre consommation depasse 150% de la normale -- verifiez vos appareils"
-2. **Widget predictif** : "Dans la prochaine heure, vous allez consommer ~0.12 kWh (cout estime : 0.04 GBP)"
-3. **API pour app mobile** : Endpoint REST appelable depuis une app iOS/Android
-4. **Optimisation dynamique** : "Decalez votre lave-linge dans 2h, le prix spot baisse de 30%"
+1. **Real-time push alerts**: "Your consumption exceeds 150% of normal -- check your appliances"
+2. **Predictive widget**: "In the next hour, you will consume ~0.12 kWh (estimated cost: 0.04 GBP)"
+3. **Mobile app API**: REST endpoint callable from iOS/Android app
+4. **Dynamic optimization**: "Shift your washing machine in 2 hours, spot price drops 30%"
 
-### Implementation technique
+### Technical implementation
 
 ```python
-# 1. Enregistrer le modele dans UC Model Registry (deja fait)
+# 1. Register model in UC Model Registry (already done)
 # ml_energy.gold.energy_consumption_xgboost
 
-# 2. Creer l'endpoint Model Serving via l'API
+# 2. Create Model Serving endpoint via API
 import requests
 
 endpoint_config = {
@@ -730,12 +730,12 @@ endpoint_config = {
             "entity_name": "ml_energy.gold.energy_consumption_xgboost",
             "entity_version": "1",
             "workload_size": "Small",
-            "scale_to_zero_enabled": True  # Economise quand pas de trafic
+            "scale_to_zero_enabled": True  # Save when no traffic
         }]
     }
 }
 
-# 3. Appeler l'endpoint
+# 3. Call the endpoint
 response = requests.post(
     "https://<workspace>/serving-endpoints/energy-prediction-endpoint/invocations",
     headers={"Authorization": "Bearer <token>"},
@@ -744,207 +744,229 @@ response = requests.post(
 prediction = response.json()  # {"predictions": [0.087]}
 ```
 
-### Pre-requis et priorite
+### Prerequisites and priority
 
-- **Edition requise** : Databricks **Premium** ou **Enterprise** (non disponible sur Free Edition)
-- **Priorite** : **Phase 3** (apres Unity Catalog + DLT)
-- Le batch quotidien reste suffisant tant que le dashboard Streamlit est le seul consommateur
-- Model Serving devient pertinent des qu'une application temps reel (mobile, alertes, API publique) est envisagee
+- **Edition required**: Databricks **Premium** or **Enterprise** (not available on Free Edition)
+- **Priority**: **Phase 3** (after Unity Catalog + DLT)
+- Daily batch remains sufficient as long as the Streamlit dashboard is the only consumer
+- Model Serving becomes relevant as soon as a real-time application (mobile, alerts, public API) is considered
 
 ---
 
-## Securite
+## Security
 
-### Gestion des Secrets
+### Secrets Management
 
-- ✅ Les credentials ne sont **jamais** en dur dans le code
-- ✅ Variables d'environnement avec validation stricte (pas de fallback hardcodés)
-- ✅ Pre-commit hooks pour bloquer les commits contenant des secrets
-- ✅ `.gitignore` complet pour tous les fichiers sensibles
-- ✅ Documentation sécurité complète : `SECURITY.md`
+- ✅ Credentials are **never** hardcoded in the code
+- ✅ Environment variables with strict validation (no hardcoded fallbacks)
+- ✅ Pre-commit hooks to block commits containing secrets
+- ✅ Complete `.gitignore` for all sensitive files
+- ✅ Complete security documentation: `SECURITY.md`
 
-### Fichiers Sensibles Protégés
+### Protected Sensitive Files
 
-| Fichier | Status | Usage |
+| File | Status | Usage |
 |---------|--------|-------|
-| `terraform.tfvars` | Gitignored | Credentials Snowflake, GCP project ID |
-| `eia_api_key.txt` | Gitignored | Clé API EIA |
-| `.env` | Gitignored | Variables d'environnement locales |
-| `*_credentials.json` | Gitignored | Service accounts GCP |
+| `terraform.tfvars` | Gitignored | Snowflake credentials, GCP project ID |
+| `eia_api_key.txt` | Gitignored | EIA API key |
+| `.env` | Gitignored | Local environment variables |
+| `*_credentials.json` | Gitignored | GCP service accounts |
 
 ### Databricks Secrets
 
-Les clés sensibles sont stockées dans **Databricks Secrets** (scope `ml-energy`) :
+Sensitive keys are stored in **Databricks Secrets** (scope `ml-energy`):
 
 ```bash
-# Secrets stockés
+# Stored secrets
 databricks secrets list --scope ml-energy
-# - gcp-sa-key : Service Account GCP (JSON)
-# - elexon-api-key : Clé API Elexon
+# - gcp-sa-key: GCP Service Account (JSON)
+# - elexon-api-key: Elexon API key
 ```
 
-**Important :** La clé JSON du Service Account est supprimée du disque local immédiatement après injection dans Databricks Secrets.
+**Important:** The Service Account JSON key is deleted from the local disk immediately after injection into Databricks Secrets.
 
-### Templates de Configuration
+### Configuration Templates
 
 | Template | Description |
 |----------|-------------|
-| `terraform.tfvars.example` | Configuration Terraform sans secrets |
-| `.env.example` | Variables d'environnement template |
-| `dashboard/.env.example` | Configuration dashboard template |
+| `terraform.tfvars.example` | Terraform configuration without secrets |
+| `.env.example` | Environment variables template |
+| `dashboard/.env.example` | Dashboard configuration template |
 
 ### Pre-Commit Hook
 
-Un hook Git automatique bloque les commits contenant :
-- Mots de passe
-- Clés API
+An automatic Git hook blocks commits containing:
+- Passwords
+- API keys
 - Tokens
-- Emails personnels
-- Identifiants de comptes
+- Personal emails
+- Account identifiers
 
-**Test :** `./test-precommit.sh`
+**Test:** `./test-precommit.sh`
 
 ---
 
 ## Dashboard - Energy Insights
 
-Le dashboard interactif est deploye sur **Databricks Apps** et consomme les donnees directement depuis Snowflake.
+The interactive dashboard is deployed on **Databricks Apps** and consumes data directly from Snowflake.
 
-### Acces
+### Access
 
 | | |
 |---|---|
 | **URL** | `https://energy-insights-<app-id>.aws.databricksapps.com` |
-| **Authentification** | OAuth Databricks (integre automatiquement) |
-| **Port** | Dynamique via `DATABRICKS_APP_PORT` (fallback 8501) |
+| **Authentication** | Databricks OAuth (automatically integrated) |
+| **Port** | Dynamic via `DATABRICKS_APP_PORT` (fallback 8501) |
 
-### Pages du Dashboard
+### Dashboard Pages
 
 | Page | Description |
 |---|---|
-| **Overview** | KPIs globaux (foyers, predictions, consommation moyenne), heatmap de consommation par jour/heure, distribution des profils ACORN |
-| **My Consumption** | Selection d'un foyer (LCLid), profil journalier moyen, timeline interactive, box plot par jour de semaine, radar chart hebdomadaire |
-| **Predicted vs Actual** | Courbes superposees predit/reel, scatter plot avec ligne de regression, distribution des erreurs, metriques par foyer |
-| **Budget** | Configuration tarif (prix/kWh, abonnement), cout journalier predit vs reel, economies estimees, projection mensuelle |
-| **Model Performance** | Metriques walk-forward (WMAPE, R2, RMSE, MAE) par round de validation, radar chart comparatif, evolution temporelle |
+| **Overview** | Global KPIs (households, predictions, average consumption), consumption heatmap by day/hour, ACORN profile distribution |
+| **My Consumption** | Household selection (LCLid), average daily profile, interactive timeline, box plot by day of week, weekly radar chart |
+| **Predicted vs Actual** | Overlaid curves predicted/actual, scatter plot with regression line, error distribution, per-household metrics |
+| **Budget** | Tariff configuration (price/kWh, subscription), predicted vs actual daily cost, estimated savings, monthly projection |
+| **Model Performance** | Walk-forward metrics (WMAPE, R2, RMSE, MAE) per validation round, comparative radar chart, temporal evolution |
 
 ### Design
 
-- **Theme** : Dark glassmorphism (fond `#0E1117`, accents `#6C63FF`)
-- **Graphiques** : Plotly interactifs avec hover, zoom, export PNG
-- **Cache** : `@st.cache_data(ttl=300)` pour les requetes Snowflake, `@st.cache_resource` pour la connexion
-- **Responsive** : Layout adaptatif avec colonnes Streamlit
+- **Theme**: Dark glassmorphism (background `#0E1117`, accents `#6C63FF`)
+- **Charts**: Interactive Plotly with hover, zoom, PNG export
+- **Cache**: `@st.cache_data(ttl=300)` for Snowflake queries, `@st.cache_resource` for connection
+- **Responsive**: Adaptive layout with Streamlit columns
 
-### Deploiement
+### Deployment
 
 ```bash
-# Uploader les fichiers dans le workspace Databricks
+# Upload files to Databricks workspace
 databricks workspace mkdirs /Users/<email>/ml-energy/dashboard
 databricks workspace import /Users/<email>/ml-energy/dashboard/app.py \
   --file dashboard/app.py --language PYTHON --overwrite
-# (repeter pour app.yaml, start.sh, requirements.txt)
+# (repeat for app.yaml, start.sh, requirements.txt)
 
-# Creer et deployer l'application
+# Create and deploy the application
 databricks apps create energy-insights \
   --description "ML-powered energy consumption analytics dashboard"
 databricks apps deploy energy-insights \
   --source-code-path /Workspace/Users/<email>/ml-energy/dashboard
 ```
 
-### Variables d'Environnement Requises
+### Required Environment Variables
 
 | Variable | Description |
 |---|---|
-| `SNOWFLAKE_ACCOUNT` | Identifiant du compte Snowflake (org-account) |
-| `SNOWFLAKE_USER` | Nom d'utilisateur Snowflake |
-| `SNOWFLAKE_PASSWORD` | Mot de passe Snowflake |
-| `DATABRICKS_APP_PORT` | Port dynamique assigne par Databricks Apps (automatique) |
+| `SNOWFLAKE_ACCOUNT` | Snowflake account identifier (org-account) |
+| `SNOWFLAKE_USER` | Snowflake username |
+| `SNOWFLAKE_PASSWORD` | Snowflake password |
+| `DATABRICKS_APP_PORT` | Dynamic port assigned by Databricks Apps (automatic) |
 
-### Fichiers
+### Files
 
 ```
 dashboard/
-  app.py              # Application principale (5 pages, ~1300 lignes)
-  app.yaml            # Configuration Databricks Apps (command + env vars)
-  start.sh            # Launcher script (port dynamique + theme)
-  requirements.txt    # Dependencies Python (streamlit, plotly, snowflake-connector)
-  app_debug.py        # App de diagnostic (test imports + connexion Snowflake)
+  app.py              # Main application (5 pages, ~1300 lines)
+  app.yaml            # Databricks Apps configuration (command + env vars)
+  start.sh            # Launcher script (dynamic port + theme)
+  requirements.txt    # Python dependencies (streamlit, plotly, snowflake-connector)
+  app_debug.py        # Diagnostic app (test imports + Snowflake connection)
 ```
 
-### Visualisations du Dashboard
+### Dashboard Visualizations
 
-#### Page "My Consumption" - Indicateurs du foyer
+#### Page "My Consumption" - Household Indicators
 
 ![Household KPIs](img/01_household_kpis.png)
 
-**Resume de consommation du foyer MAC000012.** Les quatre KPIs montrent une consommation totale predite de **1 129,78 kWh** sur la periode d'etude, avec une moyenne de **0,0674 kWh** par demi-heure. Le pic enregistre atteint **0,9807 kWh** sur un seul creneaux, ce qui indique des pointes ponctuelles de forte consommation (chauffage electrique, cuisson, etc.). Les **16 757 points de donnees** couvrent environ 1,5 an de mesures semi-horaires.
+**Consumption summary for household MAC000012.** The four KPIs show a total predicted consumption of **1,129.78 kWh** over the study period, with an average of **0.0674 kWh** per half-hour. The recorded peak reaches **0.9807 kWh** in a single slot, indicating occasional spikes of high consumption (electric heating, cooking, etc.). The **16,757 data points** cover approximately 1.5 years of half-hourly measurements.
 
 ---
 
-#### Page "My Consumption" - Profil journalier moyen
+#### Page "My Consumption" - Average Daily Profile
 
 ![Daily Consumption Profile](img/02_daily_consumption_profile.png)
 
-**Courbe de charge moyenne sur 24h.** La consommation suit un profil bimodal typique d'un foyer residentiels UK : un creux nocturne entre 01h et 06h (~0,03 kWh), une remontee progressive le matin (activite domestique), un plateau en journee autour de 0,07-0,08 kWh, puis un **pic de soiree a 18h atteignant 0,1186 kWh** correspondant au retour au domicile (cuisson, chauffage, eclairage). La consommation redescend progressivement apres 21h.
+**Average load curve over 24h.** Consumption follows a typical bimodal profile of UK residential households: a nighttime low between 01h and 06h (~0.03 kWh), a gradual morning rise (domestic activity), a daytime plateau around 0.07-0.08 kWh, then an **evening peak at 18h reaching 0.1186 kWh** corresponding to returning home (cooking, heating, lighting). Consumption gradually decreases after 21h.
 
 ---
 
-#### Page "My Consumption" - Timeline de consommation
+#### Page "My Consumption" - Consumption Timeline
 
 ![Consumption Timeline](img/03_consumption_timeline.png)
 
-**Serie temporelle des predictions sur toute la periode (Nov 2012 - Jan 2014).** La courbe bleue (Predicted kWh) et la courbe verte (24h Rolling Avg) montrent une **saisonnalite marquee** : la consommation est nettement plus elevee en hiver (Nov-Mar) avec des pics reguliers depassant 0,8-1,0 kWh, et basse en ete (Mai-Sep) ou la ligne de base tombe sous 0,1 kWh. Ce pattern est coherent avec un chauffage electrique dans le mix energetique du foyer.
+**Time series of predictions over the entire period (Nov 2012 - Jan 2014).** The blue curve (Predicted kWh) and the green curve (24h Rolling Avg) show **marked seasonality**: consumption is significantly higher in winter (Nov-Mar) with regular peaks exceeding 0.8-1.0 kWh, and low in summer (May-Sep) where the baseline drops below 0.1 kWh. This pattern is consistent with electric heating in the household's energy mix.
 
 ---
 
-#### Page "My Consumption" - Pattern hebdomadaire et radar 24h
+#### Page "My Consumption" - Weekly Pattern and 24h Radar
 
 ![Weekly Pattern and Radar](img/04_weekly_pattern_radar.png)
 
-**A gauche : Box plot par jour de semaine.** La distribution de la consommation est relativement stable du lundi au dimanche, avec une mediane autour de 0,04-0,05 kWh. Les jours de **week-end (samedi, dimanche) montrent une dispersion legerement plus elevee** avec des outliers plus frequents (max 0,98 kWh samedi), ce qui s'explique par une presence au domicile plus longue et des activites variables.
+**Left: Box plot by day of week.** The consumption distribution is relatively stable from Monday to Sunday, with a median around 0.04-0.05 kWh. **Weekend days (Saturday, Sunday) show slightly higher dispersion** with more frequent outliers (max 0.98 kWh Saturday), which is explained by longer home presence and variable activities.
 
-**A droite : Radar chart 24h.** Le radar confirme le profil journalier : la zone de consommation s'etend clairement vers les heures 17h-19h (pic de soiree) et se contracte entre 02h et 06h (creux nocturne). La forme asymetrique du radar revele que l'essentiel de la consommation se concentre sur la tranche 09h-22h.
+**Right: 24h radar chart.** The radar confirms the daily profile: the consumption zone clearly extends toward hours 17h-19h (evening peak) and contracts between 02h and 06h (nighttime low). The asymmetric shape of the radar reveals that most consumption is concentrated in the 09h-22h slot.
 
 ---
 
-#### Page "Predicted vs Actual" - Superposition temporelle
+#### Page "Predicted vs Actual" - Temporal Overlay
 
 ![Predicted vs Actual Overlay](img/05_predicted_vs_actual_overlay.png)
 
-**Courbes superposees predit (bleu) vs reel (vert) avec bande d'erreur (rouge).** Sur toute la periode Nov 2012 - Jan 2014, le modele XGBoost suit fidelement la dynamique reelle. La courbe d'erreur (axe droit) oscille principalement entre -0,2 et +0,2 kWh, avec des pics d'erreur concentres sur les periodes de **forte variabilite hivernale** ou la consommation est moins previsible. En ete, l'erreur est quasi nulle car la consommation est faible et reguliere.
+**Overlaid curves predicted (blue) vs actual (green) with error band (red).** Over the entire Nov 2012 - Jan 2014 period, the XGBoost model faithfully follows the actual dynamics. The error curve (right axis) mainly oscillates between -0.2 and +0.2 kWh, with error spikes concentrated during **winter high variability** periods where consumption is less predictable. In summer, the error is almost zero because consumption is low and regular.
 
 ---
 
-#### Page "Predicted vs Actual" - Scatter plot et distribution d'erreur
+#### Page "Predicted vs Actual" - Scatter Plot and Error Distribution
 
 ![Scatter and Error Distribution](img/06_scatter_error_distribution.png)
 
-**A gauche : Scatter plot predit vs reel.** Les points se regroupent le long de la diagonale (ligne de prediction parfaite en rouge pointille), confirmant la bonne qualite du modele. On observe une **concentration dense pour les faibles consommations** (0-0,3 kWh) qui constituent la majorite des observations. Pour les valeurs elevees (>0,5 kWh), le modele tend a sous-estimer legerement, ce qui est visible par les points au-dessus de la diagonale.
+**Left: Scatter plot predicted vs actual.** Points cluster along the diagonal (perfect prediction line in red dashed), confirming good model quality. We observe a **dense concentration for low consumptions** (0-0.3 kWh) which constitute the majority of observations. For high values (>0.5 kWh), the model tends to slightly underestimate, which is visible by points above the diagonal.
 
-**A droite : Distribution des erreurs.** L'histogramme montre une distribution **centree autour de zero** (ligne verte "Zero error") et fortement concentree dans l'intervalle [-0,1 ; +0,1] kWh. La grande majorite des predictions sont dans une marge d'erreur de 0,2 kWh. La distribution est legerement asymetrique vers les valeurs negatives, indiquant une tendance a la sous-estimation sur les fortes consommations.
+**Right: Error distribution.** The histogram shows a distribution **centered around zero** (green line "Zero error") and heavily concentrated in the [-0.1; +0.1] kWh interval. The vast majority of predictions are within a 0.2 kWh error margin. The distribution is slightly asymmetric toward negative values, indicating a tendency to underestimate high consumptions.
 
 ---
 
-#### Page "Predicted vs Actual" - Comparaison journaliere agregee
+#### Page "Predicted vs Actual" - Aggregated Daily Comparison
 
 ![Daily Aggregated Comparison](img/07_daily_aggregated_comparison.png)
 
-**Comparaison quotidienne predit (bleu) vs reel (vert) avec pourcentage d'erreur (rouge).** Ce graphique agrege les 48 mesures semi-horaires en un total journalier. On observe que le modele suit bien les variations saisonnieres (5-14 kWh/jour en hiver, 2-5 kWh/jour en ete). Le **pourcentage d'erreur (axe droit)** reste generalement entre 0% et 20%, avec des pics occasionnels pouvant atteindre 60-80% sur certains jours atypiques (vacances, meteo extreme, etc.). La concordance est particulierement bonne sur les mois de mai a septembre.
+**Daily comparison predicted (blue) vs actual (green) with error percentage (red).** This chart aggregates the 48 half-hourly measurements into a daily total. We observe that the model follows seasonal variations well (5-14 kWh/day in winter, 2-5 kWh/day in summer). The **error percentage (right axis)** generally remains between 0% and 20%, with occasional spikes reaching 60-80% on certain atypical days (holidays, extreme weather, etc.). Agreement is particularly good during May to September.
 
 ---
 
-#### Page "Budget" - Estimation des couts
+#### Page "Budget" - Cost Estimation
 
 ![Budget Daily Cost](img/08_budget_daily_cost.png)
 
-**Estimation budgetaire basee sur les predictions.** Les KPIs affichent un cout total estime de **580,32 GBP** sur la periode, soit **34,61 GBP/mois** en moyenne. La decomposition en **heures pleines (65,50 GBP)** vs **heures creuses (23,83 GBP)** montre que l'essentiel du cout provient des heures standard. Le graphique empile (barres) decompose le cout quotidien en **standing charge** (gris, cout fixe d'abonnement) et **energie** (bleu). On voit clairement que les jours d'hiver coutent 3 a 4 GBP/jour contre moins de 1 GBP en ete.
+**Budget estimation based on predictions.** The KPIs display an estimated total cost of **580.32 GBP** over the period, or **34.61 GBP/month** on average. The breakdown into **peak hours (65.50 GBP)** vs **off-peak hours (23.83 GBP)** shows that most of the cost comes from standard hours. The stacked chart (bars) breaks down daily cost into **standing charge** (gray, fixed subscription cost) and **energy** (blue). We clearly see that winter days cost 3 to 4 GBP/day versus less than 1 GBP in summer.
 
 ---
 
-#### Page "Budget" - Repartition tarifaire et conseils d'economies
+#### Page "Budget" - Tariff Distribution and Savings Advice
 
 ![Tariff Distribution and Savings](img/09_tariff_distribution_savings.png)
 
-**A gauche : Donut chart de repartition par periode tarifaire.** La consommation se repartit en : **66,9% Standard** (tarif normal), **24,2% Peak** (heures de pointe 16h-19h) et **8,8% Off-Peak** (heures creuses 00h-07h). Le poids important de la tranche Peak est coherent avec le pic de soiree observe dans le profil journalier.
+**Left: Donut chart of distribution by tariff period.** Consumption is distributed as: **66.9% Standard** (normal tariff), **24.2% Peak** (peak hours 16h-19h) and **8.8% Off-Peak** (off-peak hours 00h-07h). The significant weight of the Peak period is consistent with the evening peak observed in the daily profile.
 
-**A droite : Recommandations d'economies.** Le systeme detecte un **usage eleve en heures de pointe (35%)** et recommande de decaler certains appareils (lave-vaisselle, lave-linge, recharge vehicule electrique) vers les heures creuses. L'economie potentielle estimee est de **86,08 GBP** sur la periode si toute la consommation de pointe etait deplacee en heures creuses -- une reduction de ~15% de la facture totale.
+**Right: Savings recommendations.** The system detects **high peak-hour usage (35%)** and recommends shifting certain appliances (dishwasher, washing machine, electric vehicle charging) to off-peak hours. The estimated potential savings is **86.08 GBP** over the period if all peak consumption were moved to off-peak hours -- a reduction of ~15% of the total bill.
+
+---
+
+## License
+
+MIT License - See LICENSE file for details.
+
+---
+
+## Contributors
+
+- **Stefen Taime** - Initial work - [GitHub](https://github.com/Stefen-Taime)
+
+---
+
+## Acknowledgments
+
+- **Smart Meters in London** dataset from Kaggle
+- **NESO**, **Elexon**, **Carbon Intensity** APIs for UK energy data
+- **Databricks** Community Edition for free compute
+- **Snowflake** for data warehousing
+- **Terraform** for Infrastructure as Code
